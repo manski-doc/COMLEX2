@@ -1,0 +1,195 @@
+---
+title: "COMLEX2_Advising_Report_Template"
+author: "Sam Manski"
+format: 
+  pdf:
+    fontsize: 9
+---
+
+{{< pagebreak >}}
+
+```{r}
+#| echo: false
+#| results: "asis"
+#| include: !expr (!advising)
+
+cat("## ")
+cat(data$First_Name, " ", data$Last_Name)
+cat(" COMLEX-USA Level 2-CE Prediction Report")
+cat("\n")
+```
+
+```{r}
+#| echo: false
+#| results: "asis"
+#| include: !expr advising
+
+cat("## ")
+cat(data$First_Name, " ", data$Last_Name)
+cat(" COMLEX-USA Level 2-CE Prediction Report")
+cat(" [Advisor]\n")
+```
+
+PID: `r data$PID`; Class of `r data$cohort`
+
+```{r}
+#| include: false
+library(tidyverse)
+library(scales)
+observed_vars <- NULL
+imputed_vars <- NULL
+
+if(("COMAT_EM_imp" %in% names(data)) && data$COMAT_EM_imp) imputed_vars <- c("COMAT_EM", imputed_vars) else observed_vars <- c("COMAT_EM", observed_vars)
+if(("COMAT_FM_imp" %in% names(data)) && data$COMAT_FM_imp) imputed_vars <- c("COMAT_FM", imputed_vars) else observed_vars <- c("COMAT_FM", observed_vars)
+if(("COMAT_OPP_imp" %in% names(data)) && data$COMAT_OPP_imp) imputed_vars <- c("COMAT_OPP", imputed_vars) else observed_vars <- c("COMAT_OPP", observed_vars)
+if(("COMAT_OBGYN_imp" %in% names(data)) && data$COMAT_OBGYN_imp) imputed_vars <- c("COMAT_OBGYN", imputed_vars) else observed_vars <- c("COMAT_OBGYN", observed_vars)
+if(("COMAT_IM_imp" %in% names(data)) && data$COMAT_IM_imp) imputed_vars <- c("COMAT_IM", imputed_vars) else observed_vars <- c("COMAT_IM", observed_vars)
+if(("COMAT_PEDS_imp" %in% names(data)) && data$COMAT_PEDS_imp) imputed_vars <- c("COMAT_PEDS", imputed_vars) else observed_vars <- c("COMAT_PEDS", observed_vars)
+if(("COMAT_SURG_imp" %in% names(data)) && data$COMAT_SURG_imp) imputed_vars <- c("COMAT_SURG", imputed_vars) else observed_vars <- c("COMAT_SURG", observed_vars)
+if(("COMSAE_att1_imp" %in% names(data)) && data$COMSAE_att1_imp) imputed_vars <- c("COMSAE_att1", imputed_vars) else observed_vars <- c("COMSAE_att1", observed_vars)
+if(("Cumulative_Score_imp" %in% names(data)) && data$Cumulative_Score_imp) imputed_vars <- c("Cumulative_Score", imputed_vars) else observed_vars <- c("Cumulative_Score", observed_vars)
+if(("COMLEX1_imp" %in% names(data)) && data$COMLEX1_imp) imputed_vars <- c("COMLEX1", imputed_vars) else observed_vars <- c("COMLEX1", observed_vars)
+
+```
+
+### Observed Student Data on Predictors of COMLEX-USA Level 2-CE
+
+```{r}
+#| echo: false
+#| include: !expr ncol(data[observed_vars]) > 0
+
+new_names <- c("COMLEX1 Performance" = "COMLEX1",
+               "COMSAE_Attempt_1" = "COMSAE_att1")
+
+observed_data <- as.data.frame(data[observed_vars], col.names = observed_vars) |> 
+  dplyr::rename(any_of(new_names))
+kableExtra::kable(observed_data, format = "latex", 
+                  col.names = gsub("[_]", " ", names(observed_data)), 
+                  row.names = FALSE,
+                  align = "c") %>%
+  kable_styling(font_size = 9, position = "left", 
+                latex_options = c("HOLD_position", "scale_down")) |> 
+  column_spec(1:ncol(observed_data),width="6.5em")
+```
+
+The table above shows observed measures of student performance available when we
+ran this report (table omitted if no predictors were observed). Those may
+include the first-attempt COMLEX-USA Level 1 exam result, cumulative score in
+the COM program, first-attempt score on the COMSAE, and scores on various COMAT
+exams.
+
+```{r}
+#| echo: false
+#| results: "asis"
+#| include: !expr advising
+
+cat("### Expected Scores on Missing Predictors of COMLEX-USA Level 2-CE")
+cat("\n")
+```
+
+```{r}
+#| echo: false
+#| include: !expr advising & ncol(data[imputed_vars]) > 0
+
+scenarios <- as.data.frame(data[imputed_vars]) %>% 
+  mutate(across(where(is.numeric), ~round2(.x, digits = 0)))
+kableExtra::kable(scenarios, format = "latex", 
+                  col.names = gsub("[_]", " ", names(scenarios)), 
+                  row.names = FALSE,
+                  align = "c") %>%
+  kable_styling(font_size = 9, position = "left", 
+                latex_options = c("HOLD_position", "scale_down"))
+```
+
+```{r}
+#| echo: false
+#| include: !expr advising
+
+ExplainExpected <- paste("Our prediction model uses COM exam scores such as COMSAE, COMLEX-USA Level 1 and all COMATs but",
+                         data$First_Name, 
+                         "may not have taken all of them yet.", 
+                         "To proceed despite missing values on some predictors,", 
+                         "we used the observed data in the prior section to",
+                         "impute the approximate scores", 
+                         data$First_Name, 
+                         "may achieve on the missing measures.", 
+                         "Any resulting expected scores are shown in the table",
+                         "above (table omitted if all predictors were observed).")
+```
+
+`r if(advising) ExplainExpected`
+
+### Predictions About COMLEX-USA Level 2-CE Exam Performance
+
+Using observed student performance, expected performance on missing exams, and
+past COM cohort performance, we can estimate `r data$First_Name`'s performance
+on the COMLEX-USA Level 2-CE exam. We note that prediction accuracy increases as
+more student data is observed.
+
+```{r}
+#| echo: false
+interval_vars <- c("COMLEX2_Pred", "Lower_95CI", "Upper_95CI")
+interval <- data.frame(data[,interval_vars]) %>% 
+  mutate(across(everything(), ~round2(.x, digits = 0)))
+kableExtra::kable(interval, format = "latex", 
+                  col.names = c("Point Prediction", "Interval Lower Bound", 
+                                "Interval Upper Bound"), 
+                  row.names = FALSE,
+                  align = "c") %>%
+  add_header_above(header = c("Predicted Score and 95% Prediction Interval" = 3)) %>%
+  kable_styling(font_size = 9, position = "left", 
+                latex_options = "HOLD_position")
+```
+
+The table above shows that `r data$First_Name` will most likely achieve
+a score of about `r round2(data$COMLEX2_Pred, digits = 0)` on the
+COMLEX-USA Level 2-CE exam, with a 95% chance of scoring between
+`r round2(data$Lower_95CI, digits = 0)` and
+`r round2(data$Upper_95CI, digits = 0)`.
+
+```{r}
+#| echo: false
+#| warning: true
+
+threshold_vars <- c("prob_400", "prob_450", "prob_500", "prob_550", "prob_600", 
+                    "prob_650")
+predictions <- data.frame(data[,threshold_vars]*100) %>% 
+  mutate(across(everything(), ~round2(.x, digits = 0)))
+
+kableExtra::kable(predictions, format = "latex", escape = FALSE, 
+                  col.names = c("Score $\\geq 400$", "Score $\\geq 450$", 
+                                "Score $\\geq 500$", "Score $\\geq 550$", 
+                                "Score $\\geq 600$", "Score $\\geq 650$"), 
+                  row.names =FALSE,
+                  align = "c") %>%
+  add_header_above(header = c("Percent Chance of Scoring Above Various Thresholds" = 6)) %>%
+  kable_styling(font_size = 9, position = "left", 
+                latex_options = "HOLD_position")%>%
+  add_footnote("Values of 100% are artifacts of rounding percentages of 99.5 or higher to the nearest integer.")
+```
+
+Finally, the table above shows additional predictions about
+`r data$First_Name`'s chances of scoring at or above several different
+COMLEX-USA Level 2-CE score thresholds that may be relevant when applying to
+various specialty programs. For example, `r data$First_Name` has a
+`r predictions[1,"prob_400"]`% chance of passing (scoring above 400) and
+a `r predictions[1,"prob_500"]`% chance of scoring above 500 on the
+exam.
+
+```{r}
+#| echo: false
+#| results: "asis"
+
+cat(":::{.callout-tip}")
+cat("\n")
+cat("## Important Notice")
+cat("\n")
+cat("These predictions provide useful insight into *likely* exam outcomes but \n")
+cat("*they are statistical estimates, not guarantees*.\n")
+cat("The predictions assume that students will continue to exert similar levels of \n ")
+cat("effort in studying and preparing for exams as they have in the past. \n")
+cat("Even with complete data about all predictors, it is impossible to predict with 
+    absolute certainty how individual students will perform.\n")
+cat("The only way to get a definitive outcome is to take the COMLEX-USA Level 2-CE exam.\n")
+cat(":::")
+```

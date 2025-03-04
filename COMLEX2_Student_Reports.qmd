@@ -1,0 +1,333 @@
+---
+title: "COMLEX2-CE Student Reports"
+author:
+  - name: Sam Manski
+    email: manskisa@msu.edu
+    affiliations: 
+      - name: Michigan State University, Center for Statistical Training and Consulting
+  - name: Anh Do
+    email: doanh@msu.edu
+    affiliations: 
+      - name: Michigan State University, Center for Statistical Training and Consulting
+  - name: Steven J. Pierce
+    orcid: 0000-0002-0679-3019
+    email: pierces1@msu.edu
+    affiliations: 
+      - name: Michigan State University, Center for Statistical Training and Consulting
+execute-dir: file
+params: 
+  LogFile: "COMLEX2_Student_Reports_Draft.pdf"
+format: 
+  pdf:
+    output-file: "COMLEX2_Student_Reports_Draft.pdf"
+    output-ext: "pdf"
+    documentclass: scrartcl
+    papersize: letter
+    geometry: 
+      - top=0.75in
+      - bottom=0.75in
+      - left=0.75in
+      - right=0.75in
+    number-sections: false
+    toc: true
+    toc-depth: 2
+    colorlinks: true
+    template-partials: 
+      - ../title.tex
+    include-in-header:
+      - file: ../compact-title.tex
+      - text: |
+          \usepackage{fancyhdr}
+          \usepackage[noblocks]{authblk}
+          \renewcommand*{\Authsep}{, }
+          \renewcommand*{\Authand}{, }
+          \renewcommand*{\Authands}{, }
+          \renewcommand\Affilfont{\small}
+          \usepackage[yyyymmdd,hhmmss]{datetime}
+          \usepackage{lastpage}        %% For pageref command
+          \usepackage{fontspec}
+          \defaultfontfeatures{Ligatures=TeX}
+          \usepackage[font={small}, margin=1cm, skip=2pt]{caption}
+          \usepackage{placeins}        %% For FloatBarrier command
+          \usepackage{booktabs}        %% Used by kableExtra
+          \usepackage{longtable}       %% Used by kableExtra
+          \usepackage{multirow}        %% Used by kableExtra
+          \usepackage{wrapfig}         %% Used by kableExtra
+          \usepackage{colortbl}        %% Used by kableExtra
+          \usepackage{pdflscape}       %% Used by kableExtra
+          \usepackage{tabu}            %% Used by kableExtra
+          \usepackage[normalem]{ulem}  %% Used by kableExtra
+          \usepackage{makecell}        %% Used by kableExtra
+          \usepackage{xcolor}          %% Used by kableExtra
+          \usepackage{dcolumn}         %% Used by kableExtra
+          \usepackage{titling}      
+          \usepackage{threeparttable}  %% Used by kableExtra
+          \usepackage{threeparttablex} %% Used by kableExtra
+          \usepackage{verbatim}        %% For comment command
+          \usepackage{here}
+          \pretitle{\begin{center}\LARGE\bfseries}
+          \posttitle{\end{center}}
+          \pagestyle{fancy}
+          \lhead{COMLEX-USA Level 2-CE Score Prediction Model}
+          \rhead{\today\ \currenttime}
+          \cfoot{ }
+          \fancyfoot[R]{\thepage\ of \pageref*{LastPage}}
+          \renewcommand{\headrulewidth}{0.4pt}
+          \renewcommand{\footrulewidth}{0.4pt}
+          \fancypagestyle{plain}{\pagestyle{fancy}}
+          \newcommand*\tocentryformat[1]{{\sffamily#1}}  %% Fix TOC font style
+          \RedeclareSectionCommands                      %% Fix TOC font style
+            [
+              tocentryformat=\tocentryformat,
+              tocpagenumberformat=\tocentryformat
+            ]
+            {section,subsection,subsubsection,paragraph,subparagraph}
+execute: 
+  eval: true 
+  echo: false 
+  output: true 
+  message: true 
+  warning: true 
+  error: true 
+  include: true 
+knitr:
+  opts_chunk: 
+    message: true  
+    cfsize: "scriptsize" 
+---
+
+\lfoot{\texttt{\small \detokenize{`r params$LogFile`}}}
+
+```{r}
+#| label: global-options
+
+# Create a custom chunk hook/option for controlling font size in chunk & output.
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$cfsize != "normalsize", 
+         paste0("\n \\", options$cfsize,"\n\n", x, "\n\n \\normalsize"), 
+         x)
+  })
+```
+
+{{< pagebreak >}}
+
+# Data Source
+
+```{r}
+#| label: load-packages-log
+#| include: false
+
+library(here)         # for here()
+library(quarto)       # for quarto_render(), quarto_version()
+library(lubridate)    # for today()
+library(tidyr)        # for pivot_longer()
+library(rmarkdown)    # for pandoc_version()
+library(knitr)        # for kable()
+opts_knit$set(eval.after = 'fig.cap') 
+opts_chunk$set(warning = FALSE, cache.extra = rand_seed)
+library(COMReports)   # for git_report()
+library(webexercises) # for round2()
+library(kableExtra)
+library(tidyverse)        # for dplyr, ggplot2.
+```
+
+```{r}
+#| label: define-render-child
+
+render_child <- function(data, i, advising) {
+  res = knitr::knit_child(
+   text = xfun::read_utf8(here(paste0("scripts/Prediction/Advising_Template_Predict_COMLEX2.qmd"))),
+   envir = rlang::env(data = data, i = i, advising = advising),
+   quiet = TRUE
+  )
+  cat(res, sep = '\n')
+  cat("\n")
+}
+```
+
+```{r}
+#| label: load-data
+#| echo: fenced 
+#| include: true
+
+# Data file created by "scripts/Prediction/Predict_COMLEX2_Score.qmd"
+load(file=here::here("data/Predict_COMLEX2_Score.RData"))
+
+# Data file created by "scripts/Prediction/Predict_COMLEX2_Score.qmd"
+load(file=here::here("data/COMBANK_All.RData"))
+
+# Show the data file modification date and time. 
+file.mtime(here::here("data/Predict_COMLEX2_Score.RData"))
+```
+
+{{< pagebreak >}}
+
+# Prediction Variability
+
+```{r}
+#| include: false
+median_student_name <- data.frame("Median", "Student", "APID000002", "2025", "Pass")
+names(median_student_name) <- c("First_Name", "Last_Name", "PID", "cohort", "COMLEX1")
+median_student_scores <- df_current %>% summarise(across(where(is.numeric)|where(is.logical),median))
+median_student <- cbind(median_student_name, median_student_scores)
+df_for_reports <- rbind(median_student, df_current)
+median_student_est_sd = (median_student$Upper_95CI - median_student$COMLEX2_Pred)/2
+
+historic_COMBANK <- COMBANK_All %>% filter(cohort != "2025")
+historic_COMBANK$cohort <- droplevels(historic_COMBANK$cohort)
+
+COMLEX2_summary <- data.frame(Median = median(historic_COMBANK$COMLEX2, na.rm = TRUE),
+                              Mean = mean(historic_COMBANK$COMLEX2, na.rm = TRUE),
+                              SD = sd(historic_COMBANK$COMLEX2, na.rm = TRUE),
+                              Min = min(historic_COMBANK$COMLEX2, na.rm = TRUE),
+                              Max = max(historic_COMBANK$COMLEX2, na.rm = TRUE),
+                              Lower = quantile(historic_COMBANK$COMLEX2, probs = c(0.025), na.rm = TRUE),
+Upper = quantile(historic_COMBANK$COMLEX2, probs = c(0.975), na.rm = TRUE), row.names = NULL)
+```
+
+This page discusses the variability present in COMLEX-USA Level 2-CE student
+scores and predictions. When attempting to predict COMLEX-USA Level 2-CE scores
+for individual students, we have two main sources of variability:
+
+1. Natural variability in COMLEX-USA Level 2-CE scores between students. 
+2. Uncertainty in the strength of relationships between predictor variables and 
+   COMLEX-USA Level 2-CE scores due to sampling error.
+
+## Natural Variability in Scores
+First, scores on COMLEX-USA Level 2-CE are historically variable within the COM 
+program at MSU. @tbl-historic-summary shows that for the 
+`r min(as.numeric(levels(historic_COMBANK$cohort)))` to 
+`r max(as.numeric(levels(historic_COMBANK$cohort)))` cohorts, the observed 
+scores ranged from `r COMLEX2_summary$Min` to `r COMLEX2_summary$Max` with a 
+mean of `r round(COMLEX2_summary$Mean, digits = 2)` and a standard deviation of 
+`r round(COMLEX2_summary$SD, digits = 2)`. If we ignore potential predictors, 
+we could naively expect a randomly selected student to obtain a score within the 
+95% empirical interval shown in @tbl-historic-summary, which is about 
+`r round(COMLEX2_summary$Upper - COMLEX2_summary$Lower, digits = 0)` points 
+wide. That extremely wide interval motivates our interest in using valid 
+predictors of the test scores. A good model should give us a narrower (more 
+precise) prediction interval that reduces the uncertainty about the student's 
+expected score. 
+
+```{r}
+#| echo: false
+#| label: tbl-historic-summary
+#| tbl-cap: Summary statistics for historic COMLEX-USA Level 2-CE scores at MSU COM (Cohorts 2021-2024)
+
+kable(COMLEX2_summary, digits = 2) %>% 
+  add_header_above(c(" " = 5, "95% Empirical Interval" = 2))
+```
+
+Our model estimates how much residual variability remains between students after
+accounting for the effects of the predictors (COMSAE, COMLEX-USA Level 1, and
+COMAT scores). It is exceedingly rare for a model to explain all of the 
+natural variability observed in the outcome. *Thus, even two students that have 
+identical values for all predictors will likely score differently on COMLEX-USA 
+Level 2-CE*. Our predictions must reflect that residual variability to be 
+realistic. 
+
+## Sampling Error in Estimates of Predictor Effects
+The second source of variability comes from the sampling error associated with 
+estimating relationships between the model predictors (Cumulative score, COMSAE 
+first attempt, COMLEX-USA Level 1 first attempt, and COMAT subject exams) and 
+COMLEX-USA Level 2-CE scores in a sample of students rather than from the entire 
+population of interest. The uncertainty regarding the exact values of these
+regression coefficients in the population also contributes some variability to
+predicted COMLEX-USA Level 2-CE scores.
+
+## How Prediction Intervals Are Obtained
+For each student, our model simulates 6,000 possible COMLEX-USA Level 2-CE exam
+results, accounting for both variability in the impact of predictors and 
+residual variability between students. We then summarize these results into a
+point prediction (the median of simulated scores) and a 95% prediction interval
+(the 2.5th and 97.5th percentiles of the simulated scores). There is a 95% 
+chance that the individual student will get a score within this interval. 
+Because the distributions of predicted values for a given student are 
+approximately normal, the bounds of the prediction interval should be about
+$\pm 1.96$ standard deviations away from the point prediction score.
+
+## Comparing Prediction Intervals to Historic Distribution of Exam Scores
+
+```{r}
+#| label: fig-density
+#| fig-height: 2
+#| fig-width: 7
+#| echo: false
+#| fig-cap: Historic COMLEX-USA Level 2-CE distribution and 95% interval contrasted with predicted distribution and 95% interval for a median student.
+ggplot(data = historic_COMBANK) + 
+  geom_density(aes(x = COMLEX2, col = "Historic_Distribution")) +
+  geom_function(fun = dnorm, 
+                args = list(mean = median_student$COMLEX2_Pred, 
+                            sd = median_student_est_sd), 
+                aes(col = "Median_Student_Predicted"))+
+  geom_vline(aes(xintercept = median_student$Lower_95CI, 
+                 col = "Median_Student_Predicted"), 
+             linetype = "dotted")+ 
+  geom_vline(aes(xintercept = median_student$Upper_95CI, 
+                 col = "Median_Student_Predicted"), 
+             linetype = "dotted")+
+  geom_vline(aes(xintercept = COMLEX2_summary$Min, col = "Historic_Min_Max"))+ 
+  geom_vline(aes(xintercept = COMLEX2_summary$Max, col = "Historic_Min_Max"))+
+  geom_vline(aes(xintercept = COMLEX2_summary$Lower, 
+                 col = "Historic_Distribution"), 
+             linetype = "dotted")+ 
+  geom_vline(aes(xintercept = COMLEX2_summary$Upper, 
+                 col = "Historic_Distribution"), 
+             linetype = "dotted")+
+  scale_color_manual(name = " ", 
+                     values = c(Historic_Distribution = "black", 
+                                Median_Student_Predicted = "blue", 
+                                Historic_Min_Max = "orange"))
+```
+
+We can contrast the predicted interval for a given student with the historic
+distribution of COMLEX-USA Level 2-CE scores to show that though our prediction
+intervals may still encompass a large range of scores, they are much narrower 
+than the historic distribution. @fig-density shows the historic distribution of 
+COMLEX-USA Level 2-CE scores as the black solid line with the vertical dotted 
+black lines representing the empirical 95% interval. We then overlay a predicted 
+distribution for a median student in blue with vertical dotted blue lines 
+representing the 95% prediction interval. Finally, we include the historic 
+minimum and maximum score observed as vertical orange lines to show the full 
+range of observed COMLEX-USA Level 2-CE scores. 
+
+::: {.callout-tip}
+The prediction interval is narrower than the historic distribution precisely 
+because the model includes useful and informative predictors. However, it does 
+not collapse down to a single point because the available predictors do not 
+explain all of the natural variability in student scores and there is sampling 
+error in the estimated effects of the predictors. 
+:::
+
+If our interest lay solely in the expected mean score for students with a
+particular combination of values on the predictors, we could produce a 95%
+confidence interval for the *mean* student score that would be narrower than the
+prediction interval for an individual student's predicted score. However, here
+we aim to make predictions regarding individuals, so we must include the
+residual variance when setting the interval bounds. That is why the prediction
+intervals for a single student are wider than the confidence interval for the mean.
+
+Finally, we note that as more data is collected, both for individual student 
+predictors and COMLEX-USA Level 2-CE results for entire cohorts, the width of 
+our prediction intervals should decrease because sampling error is a function of 
+the sample size used to estimate the model. 
+
+{{< pagebreak >}}
+
+# Individual Reports
+
+```{r}
+#| results: "asis"
+#| include: true
+
+
+
+#for(i in 1:1) # For testing purposes
+for(i in 1:length(df_for_reports$PID)) # For complete report
+{
+  render_child(data = df_for_reports[i,], i = i, advising = TRUE)
+  render_child(data = df_for_reports[i,], i = i, advising = FALSE)
+}
+```
